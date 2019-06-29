@@ -23,8 +23,7 @@ app.use(express.json());
 app.use(express.urlencoded());
 app.use(express.methodOverride());
 app.use(app.router);
-app.use(express.static(path.join(__dirname, 'public')));
-app.use(express.static(path.join(__dirname, 'images')));
+app.use('/images', express.static(__dirname + '/images'));
 
 const optionsMobile = {
   // screenSize: {
@@ -71,12 +70,15 @@ var convertImages = async (urlArray, complete) => {
   async_lib.forEach(urlArray, (url, callback) => {
     var fileName = "images/" + url.replace(url.substring(0, url.indexOf(".") + 1), "") + ".png";
     if (!fs.existsSync(fileName)) {
-      (() => {
-        captureWebsite.file(url, fileName, {
+      (async () => {
+        await captureWebsite.file(url, fileName, {
           width: 800,
-          height: 600
+          height: 600,
+          scaleFactor: 0.1
         }).then(callback);
       })();
+    } else {
+      callback();
     }
   }, (err) => {
     if (!err)
