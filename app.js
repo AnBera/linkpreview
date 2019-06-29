@@ -1,8 +1,6 @@
-
 /**
  * Module dependencies.
  */
-
 var express = require('express');
 var routes = require('./routes');
 var user = require('./routes/user');
@@ -10,6 +8,8 @@ var http = require('http');
 var path = require('path');
 const webshot = require('webshot');
 var fs = require("fs");
+const captureWebsite = require('capture-website');
+var async_lib = require("async");
 
 var app = express();
 
@@ -24,6 +24,7 @@ app.use(express.urlencoded());
 app.use(express.methodOverride());
 app.use(app.router);
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'images')));
 
 const optionsMobile = {
   // screenSize: {
@@ -59,6 +60,30 @@ app.get('/thumbnail', function (req, res) {
 
 });
 
+app.post('/saveUrlToImage', function (req, res) {
+  // create the screenshot from https://github.com/sindresorhus/capture-website
+  var urlArray = req.body;
+  convertImages(urlArray, function () {
+    res.status(200).json(true);
+  })
+});
+var convertImages = async (urlArray, complete) => {
+  async_lib.forEach(urlArray, (url, callback) => {
+    var fileName = "images/" + url.replace(url.substring(0, url.indexOf(".") + 1), "") + ".png";
+    if (!fs.existsSync(fileName)) {
+      (() => {
+        captureWebsite.file(url, fileName, {
+          width: 800,
+          height: 600
+        }).then(callback);
+      })();
+    }
+  }, (err) => {
+    if (!err)
+      complete()
+  });
+}
+
 var base64_encode = function (file) {
   // read binary data
   var bitmap = fs.readFileSync(file);
@@ -66,6 +91,6 @@ var base64_encode = function (file) {
   return new Buffer(bitmap).toString('base64');
 }
 
-http.createServer(app).listen(app.get('port'), function(){
+http.createServer(app).listen(app.get('port'), function () {
   console.log('Express server listening on port ' + app.get('port'));
 });
