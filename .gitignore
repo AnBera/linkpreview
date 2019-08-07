@@ -34,6 +34,8 @@ build/Release
 # Dependency directories
 node_modules
 jspm_packages
+images
+iisnode
 
 # Optional npm cache directory
 .npm
@@ -44,3 +46,6 @@ jspm_packages
 # Optional REPL history
 .node_repl_history
 output-thumbnail.png
+web.config
+web - Copy.config
+images/amazon.in.png

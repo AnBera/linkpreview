@@ -9,6 +9,7 @@ var path = require('path');
 const webshot = require('webshot');
 var fs = require("fs");
 const captureWebsite = require('capture-website');
+var SaveImageData=require("./mongoDB");
 var async_lib = require("async");
 var SaveImageData=require("./mongoDB");
 var app = express();
