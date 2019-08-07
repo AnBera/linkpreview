@@ -32,7 +32,7 @@ app.use((req, res, nxt) => {
     res.header('Access-Control-Allow-Methods', '*');
     return res.status(204).json({});
   }
-  next();
+  nxt();
 });
 
 const optionsMobile = {
