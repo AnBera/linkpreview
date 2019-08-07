@@ -9,6 +9,7 @@ var path = require('path');
 const webshot = require('webshot');
 var fs = require("fs");
 const captureWebsite = require('capture-website');
+var SaveImageData=require("./mongoDB");
 var async_lib = require("async");
 
 var app = express();
@@ -24,6 +25,15 @@ app.use(express.urlencoded());
 app.use(express.methodOverride());
 app.use(app.router);
 app.use('/images', express.static(__dirname + '/images'));
+app.use((req, res, nxt) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Header', '*');
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Methods', '*');
+    return res.status(204).json({});
+  }
+  next();
+});
 
 const optionsMobile = {
   // screenSize: {
@@ -61,28 +71,69 @@ app.get('/saveUrlToImage', function (req, res) {
 app.post('/thumbnail', function (req, res) {
   // create the screenshot from https://github.com/sindresorhus/capture-website
   var urlArray = req.body;
+  let callCount = 0;
   convertImages(urlArray, function () {
-    res.status(200).json(true);
-  })
+    callCount++;
+    if (callCount >= urlArray.length)
+      res.status(200).send({
+        data: true
+      });
+  });
 });
+
+app.post('/SaveUrlBatchImage', function (req, res) {
+  // create the screenshot from https://github.com/sindresorhus/capture-website
+  var userid = req.body.uniqueID;
+  var urlArray = req.body.bookmarks;
+  SaveImageData({userID:userid,bookmakArray:urlArray},function(){
+    res.status(200).send({
+      imagesSaved: true
+    });
+  });
+  
+});
+
+const extractHostname = url => {
+  var hostname;
+
+  //find & remove protocol (http, ftp, etc.) and get hostname
+  if (url.indexOf("//") > -1) {
+    hostname = url.split("/")[2];
+  } else {
+    hostname = url.split("/")[0];
+  }
+
+  //find & remove port number
+  hostname = hostname.split(":")[0];
+  //find & remove "?"
+  hostname = hostname.split("?")[0];
+  //replace initial www.
+  hostname = hostname.replace(/^www./gi, '');
+
+  return hostname;
+};
+
 var convertImages = async (urlArray, complete) => {
-  async_lib.forEach(urlArray, (url, callback) => {
-    var fileName = "images/" + url.replace(url.substring(0, url.indexOf(".") + 1), "") + ".png";
+  async_lib.forEachOf(urlArray, async (url, index, callback) => {
+    var fileName = "images/" + extractHostname(url) + ".png"; //url.replace(url.substring(0, url.indexOf(".") + 1), "") + ".png";
     if (!fs.existsSync(fileName)) {
       (async () => {
         await captureWebsite.file(url, fileName, {
-          width: 800,
-          height: 600,
+          width: 920,
+          height: 980,
           scaleFactor: 0.1
-        }).then(callback);
-      })();
+        })
+      })()
+      .then(() => {
+        complete();
+        callback()
+      })
+
     } else {
+      complete();
       callback();
     }
-  }, (err) => {
-    if (!err)
-      complete()
-  });
+  })
 }
 
 var base64_encode = function (file) {
