@@ -46,7 +46,6 @@ iisnode
 # Optional REPL history
 .node_repl_history
 output-thumbnail.png
-Configs/config.js
 web.config
 web - Copy.config
 images/amazon.in.png
