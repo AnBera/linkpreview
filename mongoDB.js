@@ -32,7 +32,7 @@ const SaveImageData = async (ObjBookmark, callback) => {
                     dateAdded:moment().format(),
                     dateModified:moment().format()
                   }
-                    db.collection("Bookmarks").updateOne({_id:result[0]._id},{ $set:{users:newUser}},
+                    db.collection("Bookmarks").updateOne({url:result[0].url},{ $set:{users:newUser}},
                       (err,result)=>{
                       if (err) {
                         console.log("Unable to Update");
