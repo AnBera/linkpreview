@@ -32,7 +32,7 @@ const SaveImageData = async (ObjBookmark, callback) => {
                     dateAdded:moment().format(),
                     dateModified:moment().format()
                   }
-                    db.collection("Bookmarks").updateOne({url:result[0].url},{ $set:{users:newUser}},
+                    db.collection("Bookmarks").updateOne({url:result[0].url, shardInfo:result[0].shardInfo},{ $set:{users:newUser}},
                       (err,result)=>{
                       if (err) {
                         console.log("Unable to Update");
@@ -53,7 +53,8 @@ const SaveImageData = async (ObjBookmark, callback) => {
                 db.collection("Bookmarks").insertOne({
                     url: element.url,
                     imageName: element.imageName,
-                    users: userInfo
+                    users: userInfo,
+                    shardInfo: element.imageName.charAt(0).toLowerCase() || 'default'
                   },
                   (err, result) => {
                     if (err) {

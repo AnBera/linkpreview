@@ -49,3 +49,5 @@ output-thumbnail.png
 web.config
 web - Copy.config
 images/amazon.in.png
+.deployment
+.vscode/settings.json
