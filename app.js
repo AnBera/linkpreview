@@ -9,9 +9,8 @@ var path = require('path');
 const webshot = require('webshot');
 var fs = require("fs");
 const captureWebsite = require('capture-website');
-var SaveImageData=require("./mongoDB");
+var upsertMongodb=require("./mongoDB");
 var async_lib = require("async");
-var SaveImageData=require("./mongoDB");
 var app = express();
 
 // all environments
@@ -54,6 +53,15 @@ if ('development' == app.get('env')) {
 
 app.get('/', routes.index);
 app.get('/users', user.list);
+app.post('/updateHitCount',(req,res)=>{
+  var hitCountObject = req.body;
+  upsertMongodb.UpdateHitCount(hitCountObject,()=>{
+    res.status(200).send({
+      data: true
+    });
+  });
+})
+
 app.get('/saveUrlToImage', function (req, res) {
   // create the screenshot
   webshot(req.query.url, 'images/output-thumbnail.png', optionsMobile, function (err) {
@@ -85,7 +93,7 @@ app.post('/SaveUrlBatchImage', function (req, res) {
   // create the screenshot from https://github.com/sindresorhus/capture-website
   var userid = req.body.uniqueID;
   var urlArray = req.body.bookmarks;
-  SaveImageData({userID:userid,bookmakArray:urlArray},function(){
+  upsertMongodb.SaveImageData({userID:userid,bookmakArray:urlArray},function(){
     res.status(200).send({
       imagesSaved: true
     });
