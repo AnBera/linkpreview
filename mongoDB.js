@@ -15,78 +15,82 @@ const SaveImageData = async (ObjBookmark, callback) => {
       (error, client) => {
         if (client) {
           const db = client.db(databaseName);
+          let isUserPresent = false;
           searchUser(db, ObjBookmark.userID, ObjBookmark.userID.charAt(0).toLowerCase() || 'default').then((searchedUsers) => {
-            if (searchedUsers) {
-              ObjBookmark.bookmakArray.forEach(element => {
-                db.collection("Bookmarks").find({
-                  url: element.url
-                }).toArray(function (err, result) {
-                  if (err) {
-                    console.log(err);
-                    return false;
-                  }
-                  /*If url is present*/
-                  else if (result.length > 0) {
-                    let existingUser = result[0].users[ObjBookmark.userID];
-                    /*If url is present, and user is new*/
-                    if (!existingUser) {
-                      let newUser = {
-                        ...result[0].users
-                      };
-                      newUser[ObjBookmark.userID] = {
-                        hitCount: 0,
-                        dateAdded: moment().format(),
-                        dateModified: moment().format()
-                      }
-                      db.collection("Bookmarks").updateOne({
-                          url: result[0].url,
-                          shardInfo: result[0].shardInfo
-                        }, {
-                          $set: {
-                            users: newUser
-                          }
-                        },
-                        (err, bookmarkUpdatedresult) => {
-                          if (err) {
-                            console.log("Unable to Update");
-                            return false;
-                          } else if (bookmarkUpdatedresult) {
-                            updateUserDetails(db, searchedUsers, ObjBookmark.userID, bookmarkUpdatedresult.upsertedId, result[0].url).then((response) => {
-                              console.log('Inserted', response);
-                            })
-                          }
-                        })
-                    }
-                  }
-                  /*If url is not present*/
-                  else if (result.length === 0) {
-                    let userInfo = {};
-                    userInfo[ObjBookmark.userID] = {
+            if (searchedUsers.length > 0) {
+              isUserPresent = true;
+            }
+            ObjBookmark.bookmakArray.forEach(element => {
+              db.collection("Bookmarks").find({
+                url: element.url
+              }).toArray(function (err, result) {
+                if (err) {
+                  console.log(err);
+                  return false;
+                }
+                /*If url is present*/
+                else if (result.length > 0) {
+                  let existingUser = result[0].users[ObjBookmark.userID];
+                  /*If url is present, and user is new*/
+                  if (!existingUser) {
+                    let newUser = {
+                      ...result[0].users
+                    };
+                    newUser[ObjBookmark.userID] = {
                       hitCount: 0,
                       dateAdded: moment().format(),
                       dateModified: moment().format()
                     }
-                    db.collection("Bookmarks").insertOne({
-                        url: element.url,
-                        imageName: element.imageName,
-                        users: userInfo,
-                        shardInfo: element.imageName.charAt(0).toLowerCase() || 'default'
+                    db.collection("Bookmarks").updateOne({
+                        url: result[0].url,
+                        shardInfo: result[0].shardInfo
+                      }, {
+                        $set: {
+                          users: newUser
+                        }
                       },
-                      (err, bookmarkInserted) => {
+                      (err, bookmarkUpdatedresult) => {
                         if (err) {
-                          console.log("Unable to Insert");
+                          console.log("Unable to Update");
                           return false;
-                        } else if (bookmarkInserted) {
-                          updateUserDetails(db, searchedUsers, ObjBookmark.userID, bookmarkInserted.insertedId, element.url).then((response) => {
-                            console.log('Inserted', response);
+                        } else if (bookmarkUpdatedresult) {
+                          updateUserDetails(db, isUserPresent, ObjBookmark.userID, bookmarkUpdatedresult.upsertedId, result[0].url).then((response) => {
+                            console.log(response);
+                            isUserPresent = response;
                           })
                         }
-                      }
-                    );
+                      })
                   }
-                });
+                }
+                /*If url is not present*/
+                else if (result.length === 0) {
+                  let userInfo = {};
+                  userInfo[ObjBookmark.userID] = {
+                    hitCount: 0,
+                    dateAdded: moment().format(),
+                    dateModified: moment().format()
+                  }
+                  db.collection("Bookmarks").insertOne({
+                      url: element.url,
+                      imageName: element.imageName,
+                      users: userInfo,
+                      shardInfo: element.imageName.charAt(0).toLowerCase() || 'default'
+                    },
+                    (err, bookmarkInserted) => {
+                      if (err) {
+                        console.log("Unable to Insert");
+                        return false;
+                      } else if (bookmarkInserted) {
+                        updateUserDetails(db, isUserPresent, ObjBookmark.userID, bookmarkInserted.insertedId, element.url).then((response) => {
+                          console.log(response);
+                          isUserPresent = response;
+                        })
+                      }
+                    }
+                  );
+                }
               });
-            }
+            });
           })
         } else if (error) {
           console.log("Unable to Connect");
@@ -116,37 +120,33 @@ const searchUser = async (objDB, userId) => {
 }
 
 const updateUserDetails = async (objDB, userPresent, NewUserID, bookmarkID, bookmarkUrl) => {
+
   return new Promise((resolve, rej) => {
-    if (userPresent.length === 0) {
-      searchUser(objDB, NewUserID).then(searchedUser => {
-        userPresent = searchUser;
-        let bookmarkInfo = {};
-        bookmarkInfo[bookmarkID] = {
-          hitCount: 0,
-          url: bookmarkUrl
-        }
-        objDB.collection("Userdetails").insertOne({
-            UserGeneratedKey: NewUserID,
-            dateAdded: moment().format(),
-            lastActive: moment().format(),
-            bookmarks: {
-              bookmarkInfo
-            },
-            userId: NewUserID.charAt(0).toLowerCase() || 'default'
+    if (!userPresent) {
+      let bookmarkInfo = {};
+      bookmarkInfo[bookmarkID] = {
+        hitCount: 0,
+        url: bookmarkUrl
+      }
+      objDB.collection("Userdetails").insertOne({
+          UserGeneratedKey: NewUserID,
+          dateAdded: moment().format(),
+          lastActive: moment().format(),
+          bookmarks: {
+            bookmarkInfo
           },
-          (err, UserInsertedresult) => {
-            if (err) {
-              console.log("Unable to Insert");
-              rej(false);
-            } else if (UserInsertedresult) {
-              console.log("Inserted:", UserInsertedresult);
-              resolve(true);
-            }
-          });
-      })
-
-
-    } else if (userPresent.length >= 0) {
+          userId: NewUserID.charAt(0).toLowerCase() || 'default'
+        },
+        (err, UserInsertedresult) => {
+          if (err) {
+            console.log("Unable to Insert");
+            rej(false);
+          } else if (UserInsertedresult) {
+            console.log("Inserted:", UserInsertedresult.insertedId);
+            resolve(true);
+          }
+        })
+    } else if (userPresent) {
       let bookmarkInfo = bookmarkID ? bookmarkInfo[bookmarkID] = {
         hitCount: 0,
         url: bookmarkUrl
@@ -170,7 +170,7 @@ const updateUserDetails = async (objDB, userPresent, NewUserID, bookmarkID, book
             rej(false);
           } else if (userUpdatedresult) {
             console.log("User updated", userUpdatedresult);
-            resolve(true);
+            resolve(userPresent);
           }
         });
     }
