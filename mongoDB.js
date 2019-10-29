@@ -99,7 +99,7 @@ const SaveImageData = (ObjBookmark, callback) => {
 //Create new bookmarks based on url,title map in Bookmarks coll
 const createBookmarks = (objDB, urls, userID) => {
   let urlObjects = [];
-  urls.map((item) => {
+  urls.forEach((item, index) => {
     let userInfo = [];
     userInfo.push({
       userKey: userID,
@@ -112,7 +112,8 @@ const createBookmarks = (objDB, urls, userID) => {
       imageName: item.imageName,
       users: userInfo,
       hitCount: 0,
-      shardInfo: item.imageName.charAt(0).toLowerCase() || 'default'
+      shardInfo: item.imageName.charAt(0).toLowerCase() || 'default',
+      priority: index
     })
   })
   return new Promise((resolve, reject) => {
@@ -205,7 +206,7 @@ const createUser = async (objDB, newUserID) => {
 const addBookmarkInUser = async (objDB, userID, bookmarkUrls) => {
   return new Promise((resolve, reject) => {
     let bookmarkInfo = [];
-    bookmarkUrls.map((bmkUrl) => {
+    bookmarkUrls.forEach((bmkUrl) => {
       bookmarkInfo.push({
         url: bmkUrl,
         hitCount: 0
