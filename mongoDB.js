@@ -1,9 +1,9 @@
 "use strict"
 
-var MongoClient = require("mongodb");
-let ObjectID = require('mongodb').ObjectID
-var DBConfig = require('./Configs/config');
-var moment = require('moment');
+const { MongoClient, ObjectID }  = require("mongodb");
+// var ObjectID = require('mongodb').ObjectID;
+const DBConfig = require('./Configs/config');
+const moment = require('moment');
 const connectionUrl = DBConfig.connectionUrl;
 const databaseName = DBConfig.databaseName;
 
@@ -40,7 +40,7 @@ const SaveImageData = (ObjBookmark, callback) => {
               console.log(err);
               return false;
             } else if (foundBookmarks) {
-              //existing bookmarks where userinfo needs to be inserted
+              //existing bookmarks where userinfo needs to be inserted (think of wrapping the para with foundBookmarks.length > 0 condition)
               //check and add only the user if it is not present in foundBookmarks user map in Bookmarks collection
               let bookamrksToInsertUser = foundBookmarks.filter(bmk =>bmk.users.findIndex(i => i.userKey === ObjBookmark.userID) === -1);
               bookamrksToInsertUser.forEach((bookmark) => {
@@ -58,25 +58,28 @@ const SaveImageData = (ObjBookmark, callback) => {
 
               //new bookmarks to be inserted in Bookmark collection
               let newBookmarksToInsert =  ObjBookmark.bookmakArray.filter((item) => 
-              foundBookmarks.findIndex(i => i.url === item.url) === -1 )
-              //insert the brand new Bookamrks
-              saveBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
-                let newBookmarkIdsPerUser =[];
-                let existingBookmarksPerUser = {};
+                foundBookmarks.findIndex(i => i.url === item.url) === -1 )
+              //Create the brand new Bookamrks in Bookmarks coll
+              createBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
+                let newBookmarkUrlsPerUser =[];
+                let existingBookmarksPerUser = [];
                 
-                //existing bookmark object for user
-                if(searchedUser[0] && searchedUser[0].bookmarks) {
+                //existing bookmark array for user
+                if(searchedUser[0] && searchedUser[0].bookmarks && searchedUser[0].bookmarks.length > 0) {
                   existingBookmarksPerUser = searchedUser[0].bookmarks;
                 }
                 
-                //bookmark NOT present in User coll but present in Bookmarks coll combined with brand new saved bookmark ids
-                newBookmarkIdsPerUser = foundBookmarks.filter((foundBookmark) => {
-                  if(!existingBookmarksPerUser[foundBookmark._id]) {
-                    return foundBookmark._id
-                  }
-                }).concat(savedNewBookmaks.map(bmk => bmk._id));
+                //bookmark NOT present in user in Userdetails coll but present in Bookmarks coll combined with brand new saved bookmark ids
+                newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
+                  .concat(savedNewBookmaks).map(bmk => bmk.url);
 
-                updateUserDetails(db, ObjBookmark.userID, newBookmarkIdsPerUser, existingBookmarksPerUser).then(() => {
+                // newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => {
+                //   if(existingBookmarksPerUser.findIndex(bmk => new ObjectID(bmk.id).equals( new ObjectID(foundBookmark._id))) === -1) {
+                //     return foundBookmark._id
+                //   }
+                // }).concat(savedNewBookmaks.map(bmk => bmk._id));
+
+                addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
                   console.log('bookmarks updated in user collection');
                 })
               })
@@ -93,7 +96,8 @@ const SaveImageData = (ObjBookmark, callback) => {
   }
 }
 
-const saveBookmarks = (objDB, urls, userID) => {
+//Create new bookmarks based on url,title map in Bookmarks coll
+const createBookmarks = (objDB, urls, userID) => {
   let urlObjects = [];
   urls.map((item) => {
     let userInfo = [];
@@ -129,6 +133,7 @@ const saveBookmarks = (objDB, urls, userID) => {
   })
 }
 
+//Add a new user in existing bookmark in Bookmarks coll
 const addUserInBookmark = (objDB, bookamrkToUpdate, userKey, bookmarkTitle) => {
   return new Promise((resolve, reject) => {
     let userInfo = {
@@ -157,6 +162,7 @@ const addUserInBookmark = (objDB, bookamrkToUpdate, userKey, bookmarkTitle) => {
   });
 };
 
+//Search an user in UserDetails coll
 const searchUser = async (objDB, userId) => {
   return new Promise((resolve, rej) => {
     objDB.collection("Userdetails").find({
@@ -173,13 +179,15 @@ const searchUser = async (objDB, userId) => {
   })
 }
 
+//Create a new user in UserDetails coll
 const createUser = async (objDB, newUserID) => {
   return new Promise((resolve, reject) => {
     objDB.collection("Userdetails").insertOne({
         userKey: newUserID,
         dateAdded: moment().format(),
         lastActive: moment().format(),
-        shardInfo: newUserID.charAt(0).toLowerCase() || 'default'
+        shardInfo: newUserID.charAt(0).toLowerCase() || 'default',
+        bookmarks:[]
       },
       (err, userInsertedresult) => {
         if (err) {
@@ -193,24 +201,24 @@ const createUser = async (objDB, newUserID) => {
   })
 }
 
-const updateUserDetails = async (objDB, userID, bookmarkIDs, existingBookmarks) => {
+//Add a new bookmark in existing user in UserDetails coll
+const addBookmarkInUser = async (objDB, userID, bookmarkUrls) => {
   return new Promise((resolve, reject) => {
-    let bookmarkInfo = {
-      ...existingBookmarks
-    };
-    bookmarkIDs.map((item) => {
-      bookmarkInfo[item] = {
-        hitCount: 0,
-        dateAdded: moment().format(),
-        dateModified: moment().format()
-      };
+    let bookmarkInfo = [];
+    bookmarkUrls.map((bmkUrl) => {
+      bookmarkInfo.push({
+        url: bmkUrl,
+        hitCount: 0
+      });
     })
     objDB.collection("Userdetails").updateOne({
         userKey: userID,
         shardInfo: userID.charAt(0).toLowerCase() || 'default'
       }, {
-        $set: {
-          bookmarks: bookmarkInfo
+        $push: {
+          bookmarks: {
+            $each: bookmarkInfo
+          }
         }
       },
       (err, userUpdatedresult) => {
@@ -225,6 +233,8 @@ const updateUserDetails = async (objDB, userID, bookmarkIDs, existingBookmarks) 
     // }
   })
 }
+
+//Increase the hit count of a bookmak
 const UpdateHitCount = async (ObjHitCount, callback) => {
   try {
     MongoClient.connect(
