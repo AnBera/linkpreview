@@ -40,43 +40,46 @@ const SaveImageData = (ObjBookmark, callback) => {
               console.log(err);
               return false;
             } else if (foundBookmarks) {
-              //new bookmarks in 'Bookmark' Collection
-              // let newBookmarks = result.filter((item) => {
-              //   return !this.has(item)
-              // }, new Set(ObjBookmark.bookmakArray));
-              
+              //existing bookmarks where userinfo needs to be inserted
+              //check and add only the user if it is not present in foundBookmarks user map in Bookmarks collection
+              let bookamrksToInsertUser = foundBookmarks.filter(bmk =>bmk.users.findIndex(i => i.userKey === ObjBookmark.userID) === -1);
+              bookamrksToInsertUser.forEach((bookmark) => {
+                // find the custom title for the bookmark
+                let bookmarkTitle = null;
+                ObjBookmark.bookmakArray.find((o, i) => {
+                  if (o.url === bookmark.url) {
+                    bookmarkTitle = ObjBookmark.bookmakArray[i].title;
+                    return true;
+                  }
+                });
+                //call insert user API
+                addUserInBookmark(db, bookmark, ObjBookmark.userID, bookmarkTitle)
+              });
+
               //new bookmarks to be inserted in Bookmark collection
               let newBookmarksToInsert =  ObjBookmark.bookmakArray.filter((item) => 
               foundBookmarks.findIndex(i => i.url === item.url) === -1 )
-
-              //if bookmarks tobe inserted in Bookamrks are brand new
-              // if (newBookmarksToInsert.length > 0) {
-                saveBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
-                  let newBookmarkIdsPerUser =[];
-                  let existingBookmarksPerUser = {};
-
-                  // let allBookmarkIds = [...new set(foundBookmarks.map((item) => item._id).concat(savedNewBookmakIDs))];
-                  
-                  //existing bookmark object for user
-                  if(searchedUser[0] && searchedUser[0].bookmarks) {
-                    existingBookmarksPerUser = searchedUser[0].bookmarks;
+              //insert the brand new Bookamrks
+              saveBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
+                let newBookmarkIdsPerUser =[];
+                let existingBookmarksPerUser = {};
+                
+                //existing bookmark object for user
+                if(searchedUser[0] && searchedUser[0].bookmarks) {
+                  existingBookmarksPerUser = searchedUser[0].bookmarks;
+                }
+                
+                //bookmark NOT present in User coll but present in Bookmarks coll combined with brand new saved bookmark ids
+                newBookmarkIdsPerUser = foundBookmarks.filter((foundBookmark) => {
+                  if(!existingBookmarksPerUser[foundBookmark._id]) {
+                    return foundBookmark._id
                   }
-                  
-                  //bookmark NOT present in User coll but present in Bookmarks coll combined with brand new saved bookmark ids
-                  newBookmarkIdsPerUser = foundBookmarks.map((foundBookmark) => {
-                    if(!existingBookmarksPerUser[foundBookmark._id]) {
-                      return foundBookmark._id
-                    }
-                  }).concat(savedNewBookmaks.map(bmk => bmk._id));
+                }).concat(savedNewBookmaks.map(bmk => bmk._id));
 
-                  updateUserDetails(db, ObjBookmark.userID, newBookmarkIdsPerUser, existingBookmarksPerUser).then(() => {
-                    console.log('bookmarks updated in user collection');
-                    console.log('bookmarks updated in user collection');
-                  })
+                updateUserDetails(db, ObjBookmark.userID, newBookmarkIdsPerUser, existingBookmarksPerUser).then(() => {
+                  console.log('bookmarks updated in user collection');
                 })
-              // } else {
-
-              // }
+              })
             }
           })
         } else if (error) {
@@ -93,10 +96,13 @@ const SaveImageData = (ObjBookmark, callback) => {
 const saveBookmarks = (objDB, urls, userID) => {
   let urlObjects = [];
   urls.map((item) => {
-    let userInfo = {};
-    userInfo[userID] = {
-      urlDescription: item.description
-    }
+    let userInfo = [];
+    userInfo.push({
+      userKey: userID,
+      bookmarkTitle: item.title,
+      dateAdded: moment().format(),
+      dateModified: moment().format()
+    })
     urlObjects.push({
       url: item.url,
       imageName: item.imageName,
@@ -122,6 +128,34 @@ const saveBookmarks = (objDB, urls, userID) => {
         })
   })
 }
+
+const addUserInBookmark = (objDB, bookamrkToUpdate, userKey, bookmarkTitle) => {
+  return new Promise((resolve, reject) => {
+    let userInfo = {
+      userKey: userKey,
+      bookmarkTitle: bookmarkTitle,
+      dateAdded: moment().format(),
+      dateModified: moment().format()
+    }
+    objDB.collection("Bookmarks").updateOne({
+      _id: bookamrkToUpdate._id,
+      shardInfo: bookamrkToUpdate.shardInfo
+    }, {
+      $push: {
+        users: userInfo
+      }
+    },
+    (err, userUpdatedresult) => {
+      if (err) {
+        console.log("Unable to Insert");
+        reject(false);
+      } else if (userUpdatedresult) {
+        console.log("User updated", userUpdatedresult);
+        resolve(userInfo);
+      }
+    });
+  });
+};
 
 const searchUser = async (objDB, userId) => {
   return new Promise((resolve, rej) => {
