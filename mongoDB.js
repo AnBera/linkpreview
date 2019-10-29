@@ -17,19 +17,9 @@ const SaveImageData = (ObjBookmark, callback) => {
       async (error, client) => {
         if (client) {
           const db = client.db(databaseName);
-
           let searchedUser = await searchUser(db, ObjBookmark.userID);
-          // let existingBookmarksForUser = [];
-          // let existingBookmarkurls = {};
           if (searchedUser.length === 0) {
             searchedUser = await createUser(db, ObjBookmark.userID);
-          } else {
-            // existingBookmarkurls = {
-            //   ...searchedUsers[0].bookmarks
-            // };
-            // Object.keys(searchedUsers[0].bookmarks).forEach((item) => {
-            //   existingBookmarksForUser.push(searchedUsers[0].bookmarks[item]._id);
-            // })
           }
           db.collection("Bookmarks").find({
             url: {
@@ -53,36 +43,28 @@ const SaveImageData = (ObjBookmark, callback) => {
                   }
                 });
                 //call insert user API
-                addUserInBookmark(db, bookmark, ObjBookmark.userID, bookmarkTitle)
+                addUserInBookmark(db, bookmark, ObjBookmark.userID, bookmarkTitle);
               });
 
               //new bookmarks to be inserted in Bookmark collection
               let newBookmarksToInsert =  ObjBookmark.bookmakArray.filter((item) => 
                 foundBookmarks.findIndex(i => i.url === item.url) === -1 )
               //Create the brand new Bookamrks in Bookmarks coll
-              createBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
-                let newBookmarkUrlsPerUser =[];
-                let existingBookmarksPerUser = [];
-                
-                //existing bookmark array for user
-                if(searchedUser[0] && searchedUser[0].bookmarks && searchedUser[0].bookmarks.length > 0) {
-                  existingBookmarksPerUser = searchedUser[0].bookmarks;
-                }
-                
-                //bookmark NOT present in user in Userdetails coll but present in Bookmarks coll combined with brand new saved bookmark ids
-                newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
-                  .concat(savedNewBookmaks).map(bmk => bmk.url);
+              createBookmarks(db, newBookmarksToInsert, ObjBookmark.userID);
 
-                // newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => {
-                //   if(existingBookmarksPerUser.findIndex(bmk => new ObjectID(bmk.id).equals( new ObjectID(foundBookmark._id))) === -1) {
-                //     return foundBookmark._id
-                //   }
-                // }).concat(savedNewBookmaks.map(bmk => bmk._id));
-
-                addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
-                  console.log('bookmarks updated in user collection');
-                })
-              })
+              let newBookmarkUrlsPerUser =[];
+              let existingBookmarksPerUser = [];
+              //existing bookmark array for user
+              if(searchedUser[0] && searchedUser[0].bookmarks && searchedUser[0].bookmarks.length > 0) {
+                existingBookmarksPerUser = searchedUser[0].bookmarks;
+              }
+              //bookmark NOT present in user in Userdetails coll but present in Bookmarks coll combined with brand new saved bookmark ids
+              newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
+                .concat(newBookmarksToInsert).map(bmk => bmk.url);
+              //call insert bookmark in user API
+              addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
+                console.log('bookmarks updated in user collection');
+              });
             }
           })
         } else if (error) {
