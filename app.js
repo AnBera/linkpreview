@@ -53,14 +53,29 @@ if ('development' == app.get('env')) {
 
 app.get('/', routes.index);
 app.get('/users', user.list);
-app.post('/updateHitCount',(req,res)=>{
-  var hitCountObject = req.body;
+app.post('/increment',(req,res)=>{
+  var hitCountObject = {}
+  hitCountObject.userID = req.body.uniqueID;
+  hitCountObject.url = req.body.url;
+  hitCountObject.shardInfo = req.body.shardKey;
+
   upsertMongodb.UpdateHitCount(hitCountObject,()=>{
     res.status(200).send({
       data: true
     });
   });
-})
+});
+app.post('/urlbatch', function (req, res) {
+  // create the screenshot from https://github.com/sindresorhus/capture-website
+  var userid = req.body.uniqueID;
+  var urlArray = req.body.bookmarks;
+  upsertMongodb.SaveImageData({userID:userid,bookmakArray:urlArray},function(){
+    res.status(200).send({
+      imagesSaved: true
+    });
+  });
+  
+});
 
 app.get('/saveUrlToImage', function (req, res) {
   // create the screenshot
@@ -87,18 +102,6 @@ app.post('/thumbnail', function (req, res) {
         data: true
       });
   });
-});
-
-app.post('/SaveUrlBatchImage', function (req, res) {
-  // create the screenshot from https://github.com/sindresorhus/capture-website
-  var userid = req.body.uniqueID;
-  var urlArray = req.body.bookmarks;
-  upsertMongodb.SaveImageData({userID:userid,bookmakArray:urlArray},function(){
-    res.status(200).send({
-      imagesSaved: true
-    });
-  });
-  
 });
 
 const extractHostname = url => {

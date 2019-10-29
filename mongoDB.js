@@ -218,7 +218,7 @@ const addBookmarkInUser = async (objDB, userID, bookmarkUrls) => {
 }
 
 //Increase the hit count of a bookmak
-const UpdateHitCount = async (ObjHitCount, callback) => {
+const UpdateHitCount = (ObjHitCount, callback) => {
   try {
     MongoClient.connect(
       connectionUrl, {
@@ -227,37 +227,42 @@ const UpdateHitCount = async (ObjHitCount, callback) => {
       (error, client) => {
         if (client) {
           const db = client.db(databaseName);
-          db.collection("Bookmarks").find({
-            url: ObjHitCount.url
-          }).toArray(function (err, result) {
+
+          db.collection("Userdetails").updateOne({
+            userKey: ObjHitCount.userID,
+            shardInfo: ObjHitCount.userID.charAt(0).toLowerCase() || 'default',
+            "bookmarks.url": ObjHitCount.url
+          }, {
+            $inc: { "bookmarks.$.hitCount": 1 }
+          },
+          (err, userUpdatedresult) => {
             if (err) {
-              console.log(err);
-              return false;
-            } else if (result.length > 0) {
-              result = result[0]
-              let userInfo = {
-                hitCount: result.users[ObjHitCount.userID].hitCount + 1,
-                dateAdded: result.users[ObjHitCount.userID].dateAdded,
-                dateModified: moment().format()
-              }
-              let path = `users.${ObjHitCount.userID}`
-              db.collection("Bookmarks").updateOne({
-                _id: ObjectID(result._id),
-                shardInfo: 'y'
-              }, {
-                $set: {
-                  [path]: userInfo
-                }
-              }, (err, resultUpdateCount) => {
-                if (err) {
-                  console.log("Unable to Update");
-                } else if (resultUpdateCount) {
-                  console.log(resultUpdateCount);
-                }
-                callback()
-              })
+              console.log("Unable to Insert");
+              // reject(false);
+            } else if (userUpdatedresult) {
+              console.log("User updated", userUpdatedresult);
+              callback();
+              // resolve(bookmarkInfo);
             }
           });
+
+          db.collection("Bookmarks").updateOne({
+            url: ObjHitCount.url,
+            shardInfo: ObjHitCount.shardInfo
+          }, {
+            $inc: { hitCount: 1 }
+          },
+          (err, userUpdatedresult) => {
+            if (err) {
+              console.log("Unable to Insert");
+              // reject(false);
+            } else if (userUpdatedresult) {
+              console.log("User updated", userUpdatedresult);
+              callback();
+              // resolve(bookmarkInfo);
+            }
+          });
+
         }
       }
     )
