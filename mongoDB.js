@@ -64,7 +64,7 @@ const SaveData = (ObjBookmark, next) => {
                   .concat(savedNewBookmaks).map(bmk => bmk.url);
                 //call insert bookmark in user API
                 addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then((upsertedCount) => {
-                  console.log(upsertedCount + "Bookmarks added in user");
+                  console.log("Bookmarks added in user");
                   next();
                 }, (bookmarkAdditionErr) => {
                   console.log('Error while adding bookmarks in user');
