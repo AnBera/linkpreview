@@ -69,11 +69,11 @@ app.post('/urlbatch', (req, res) => {
   let userid = req.body.uniqueID;
   let urlArray = req.body.bookmarks;
   
-  let chunk = 5;
+  let chunk = 25;
   let parellerlTasksCount = 1;
   let q = async_lib.queue((chunkBookmarks, next) => {
       console.log('Queue Length : ' + q.length());
-      upsertMongodb.SaveImageData(chunkBookmarks, next);
+      upsertMongodb.SaveData(chunkBookmarks, next);
     }, parellerlTasksCount);
   
   q.drain = () => {

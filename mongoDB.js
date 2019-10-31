@@ -8,7 +8,7 @@ const connectionUrl = DBConfig.connectionUrl;
 const databaseName = DBConfig.databaseName;
 
 
-const SaveImageData = (ObjBookmark, next) => {
+const SaveData = (ObjBookmark, next) => {
   try {
     MongoClient.connect(
       connectionUrl, {
@@ -27,7 +27,7 @@ const SaveImageData = (ObjBookmark, next) => {
             }
           }).toArray(function (err, foundBookmarks) {
             if (err) {
-              console.log(err);
+              console.log("Unable to find bookamrks : " + err);
               next();
               // return false;
             } else if (foundBookmarks) {
@@ -63,15 +63,21 @@ const SaveImageData = (ObjBookmark, next) => {
                 newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
                   .concat(savedNewBookmaks).map(bmk => bmk.url);
                 //call insert bookmark in user API
-                addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
-                  console.log("Bookmarks added in user");
+                addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then((upsertedCount) => {
+                  console.log(upsertedCount + "Bookmarks added in user");
+                  next();
+                }, (bookmarkAdditionErr) => {
+                  console.log('Error while adding bookmarks in user');
                   next();
                 });
+              }, (bookmarkCreationErr) => {
+                console.log('Error while creating bookmarks');
+                next();
               });
             }
           })
-        } else if (error) {
-          console.log("Unable to Connect");
+        } else if (err) {
+          console.log("Unable to Connect to db : " + err);
           next();
           // return false;
         }
@@ -108,7 +114,7 @@ const createBookmarks = (objDB, urls, userID) => {
       objDB.collection("Bookmarks").insertMany(urlObjects,
         (err, response) => {
           if (err) {
-            console.log("Unable to insert :" + err);
+            console.log("Unable to create bookmarks :" + err);
             reject([]);
           } else {
             if (response) {
@@ -138,10 +144,10 @@ const addUserInBookmark = (objDB, bookamrkToUpdate, userKey, bookmarkTitle) => {
     },
     (err, userUpdatedresult) => {
       if (err) {
-        console.log("Unable to Insert");
+        console.log("Unable to Insert user in bookmark: " + err);
         reject(false);
       } else if (userUpdatedresult) {
-        console.log("User updated", userUpdatedresult);
+        console.log("User updated");
         resolve(userInfo);
       }
     });
@@ -156,7 +162,7 @@ const searchUser = async (objDB, userId) => {
       shardInfo: userId.charAt(0).toLowerCase() || 'default'
     }).toArray((err, userSearchResult) => {
       if (err) {
-        console.log("Unable to Insert");
+        console.log("Unable to search user : " + err);
         rej([]);
       } else if (userSearchResult) {
         resolve(userSearchResult)
@@ -177,10 +183,10 @@ const createUser = async (objDB, newUserID) => {
       },
       (err, userInsertedresult) => {
         if (err) {
-          console.log("Unable to Insert");
+          console.log("Unable to create user : " + err);
           reject(false);
         } else if (userInsertedresult) {
-          console.log("Inserted, User key : ", userInsertedresult.userKey);
+          console.log("Created new user");
           resolve(userInsertedresult.ops[0]);
         }
       })
@@ -209,11 +215,11 @@ const addBookmarkInUser = async (objDB, userID, bookmarkUrls) => {
       },
       (err, userUpdatedresult) => {
         if (err) {
-          console.log("Unable to Insert");
+          console.log("Unable to insert bookmark in user : " + err);
           reject(false);
         } else if (userUpdatedresult) {
-          console.log("User updated", userUpdatedresult);
-          resolve(bookmarkInfo);
+          console.log("User updated");
+          resolve(userUpdatedresult.upsertedCount);
         }
       });
     // }
@@ -240,10 +246,10 @@ const UpdateHitCount = (ObjHitCount, callback) => {
           },
           (err, userUpdatedresult) => {
             if (err) {
-              console.log("Unable to Insert");
+              console.log("Unable to increase hitcount in user : " + err);
               // reject(false);
             } else if (userUpdatedresult) {
-              console.log("User updated", userUpdatedresult);
+              console.log("Increased hitcount");
               callback();
               // resolve(bookmarkInfo);
             }
@@ -257,7 +263,7 @@ const UpdateHitCount = (ObjHitCount, callback) => {
           },
           (err, userUpdatedresult) => {
             if (err) {
-              console.log("Unable to Insert");
+              console.log("Unable to increase hitcount in bookmark : " + err);
               // reject(false);
             } else if (userUpdatedresult) {
               console.log("User updated", userUpdatedresult);
@@ -275,6 +281,6 @@ const UpdateHitCount = (ObjHitCount, callback) => {
   }
 }
 module.exports = {
-  SaveImageData,
+  SaveData,
   UpdateHitCount
 };
