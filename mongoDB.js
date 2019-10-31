@@ -8,7 +8,7 @@ const connectionUrl = DBConfig.connectionUrl;
 const databaseName = DBConfig.databaseName;
 
 
-const SaveImageData = (ObjBookmark, callback) => {
+const SaveImageData = (ObjBookmark, next) => {
   try {
     MongoClient.connect(
       connectionUrl, {
@@ -28,7 +28,8 @@ const SaveImageData = (ObjBookmark, callback) => {
           }).toArray(function (err, foundBookmarks) {
             if (err) {
               console.log(err);
-              return false;
+              next();
+              // return false;
             } else if (foundBookmarks) {
               //existing bookmarks where userinfo needs to be inserted (think of wrapping the para with foundBookmarks.length > 0 condition)
               //check and add only the user if it is not present in foundBookmarks user map in Bookmarks collection
@@ -50,31 +51,33 @@ const SaveImageData = (ObjBookmark, callback) => {
               let newBookmarksToInsert =  ObjBookmark.bookmakArray.filter((item) => 
                 foundBookmarks.findIndex(i => i.url === item.url) === -1 )
               //Create the brand new Bookamrks in Bookmarks coll
-              createBookmarks(db, newBookmarksToInsert, ObjBookmark.userID);
+              createBookmarks(db, newBookmarksToInsert, ObjBookmark.userID).then((savedNewBookmaks) => {
 
-              let newBookmarkUrlsPerUser =[];
-              let existingBookmarksPerUser = [];
-              //existing bookmark array for user
-              if(searchedUser[0] && searchedUser[0].bookmarks && searchedUser[0].bookmarks.length > 0) {
-                existingBookmarksPerUser = searchedUser[0].bookmarks;
-              }
-              //bookmark NOT present in user in Userdetails coll but present in Bookmarks coll combined with brand new saved bookmark ids
-              newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
-                .concat(newBookmarksToInsert).map(bmk => bmk.url);
-              //call insert bookmark in user API
-              addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
-                console.log('bookmarks updated in user collection');
+                let newBookmarkUrlsPerUser =[];
+                let existingBookmarksPerUser = [];
+                //existing bookmark array for user
+                if(searchedUser[0] && searchedUser[0].bookmarks && searchedUser[0].bookmarks.length > 0) {
+                  existingBookmarksPerUser = searchedUser[0].bookmarks;
+                }
+                //bookmark NOT present in user in Userdetails coll but present in Bookmarks coll combined with brand new saved bookmark ids
+                newBookmarkUrlsPerUser = foundBookmarks.filter((foundBookmark) => existingBookmarksPerUser.findIndex(bmk => bmk.url === foundBookmark.url) === -1)
+                  .concat(savedNewBookmaks).map(bmk => bmk.url);
+                //call insert bookmark in user API
+                addBookmarkInUser(db, ObjBookmark.userID, newBookmarkUrlsPerUser).then(() => {
+                  console.log("Bookmarks added in user");
+                  next();
+                });
               });
             }
           })
         } else if (error) {
           console.log("Unable to Connect");
-          return false;
+          next();
+          // return false;
         }
       })
-    callback();
   } catch (error) {
-    callback();
+    next();
   }
 }
 

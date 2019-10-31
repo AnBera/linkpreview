@@ -51,3 +51,4 @@ web - Copy.config
 images/amazon.in.png
 .deployment
 .vscode/settings.json
+.vscode/launch.json

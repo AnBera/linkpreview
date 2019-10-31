@@ -1,0 +1,86 @@
+// db.runCommand({
+//   customAction: "CreateCollection",
+//   collection: "Bookmarks",
+//   offerThroughput: 400,
+//   shardKey: "shardInfo"  
+// });
+
+// db.Bookmarks.find({ "imageName": "enjoysharepointcomrticlesetailsspuimodaldialogshowmodaldialogdonotworkaspx.png"})
+// db.Bookmarks.find({"shardInfo": "x"})
+// // db.Bookmarks.find({ id: "5d83d5593068180030cec6d0"})
+// db.Bookmarks.find({ "is_image_generated": {"$exists": false} }).sort("priority")
+// db.Bookmarks.find({ "is_image_generated": {"$exists": false}, "shardInfo": "v" })
+// db.Bookmarks.find(
+// {
+//     // "is_image_generated": {"$exists": false} ,
+//     // "is_error_in_generated": {"$exists": false},
+//     "shardInfo": "b" 
+// }
+// ).sort({"priority":1})
+// db.Bookmarks.update({"shardInfo": "b"}, {$set:{priority:1}}, {multi:true})
+// db.Bookmarks.update({"shardInfo": "d"}, {$set:{priority:2}}, {multi:true})
+
+// db.Bookmarks.remove({"shardInfo": "g"})
+
+// // db.Bookmarks.deleteOne( { imageName: "codepeniomthhpenqqw.png", "shardInfo": "c" } )
+
+// db.Bookmarks.find({
+// 			"is_image_generated": {"$exists": false} ,
+// 			"is_error_in_generated": {"$exists": false} 
+// 		}).sort({"priority": 1}).limit(10)
+
+// db.Bookmarks.find({
+// 			"is_image_generated": {"$exists": false} ,
+// 			"is_error_in_generated": {"$exists": false} 
+// 		}).sort({"shardInfo": 1})
+
+// db.Userdetails.find({
+// 			// "is_image_generated": {"$exists": false} ,
+// 			// "is_error_in_generated": {"$exists": false} 
+// 		})
+//         // .sort({"shardInfo": 1})
+
+// db.Bookmarks.find({
+// 			"url": "http://youtube.com/is2wer",
+//             "shardInfo": "y"
+// 		})
+
+// db.Bookmarks.remove({"url": "http://youtube.com/is2wer",
+//                 "shardInfo": "y"})
+
+db.Userdetails.remove({"shardInfo": "a"})
+// db.Userdetails.remove({"shardInfo": "2"})
+// db.Userdetails.remove({"shardInfo": "q"})
+
+
+db.Bookmarks.remove({"shardInfo": "a"})
+db.Bookmarks.remove({"shardInfo": "b"})
+db.Bookmarks.remove({"shardInfo": "c"})
+db.Bookmarks.remove({"shardInfo": "d"})
+db.Bookmarks.remove({"shardInfo": "e"})
+db.Bookmarks.remove({"shardInfo": "f"})
+db.Bookmarks.remove({"shardInfo": "g"})
+db.Bookmarks.remove({"shardInfo": "h"})
+db.Bookmarks.remove({"shardInfo": "i"})
+db.Bookmarks.remove({"shardInfo": "j"})
+db.Bookmarks.remove({"shardInfo": "k"})
+db.Bookmarks.remove({"shardInfo": "l"})
+db.Bookmarks.remove({"shardInfo": "m"})
+db.Bookmarks.remove({"shardInfo": "n"})
+db.Bookmarks.remove({"shardInfo": "o"})
+db.Bookmarks.remove({"shardInfo": "p"})
+db.Bookmarks.remove({"shardInfo": "q"})
+db.Bookmarks.remove({"shardInfo": "r"})
+db.Bookmarks.remove({"shardInfo": "s"})
+db.Bookmarks.remove({"shardInfo": "t"})
+db.Bookmarks.remove({"shardInfo": "u"})
+db.Bookmarks.remove({"shardInfo": "v"})
+db.Bookmarks.remove({"shardInfo": "w"})
+db.Bookmarks.remove({"shardInfo": "x"})
+db.Bookmarks.remove({"shardInfo": "y"})
+db.Bookmarks.remove({"shardInfo": "z"})
+
+
+// db.Bookmarks.find({
+// 			"imageName": "angulario.png"
+// 		})

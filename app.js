@@ -65,14 +65,30 @@ app.post('/increment',(req,res)=>{
     });
   });
 });
-app.post('/urlbatch', function (req, res) {
-  // create the screenshot from https://github.com/sindresorhus/capture-website
-  var userid = req.body.uniqueID;
-  var urlArray = req.body.bookmarks;
-  upsertMongodb.SaveImageData({userID:userid,bookmakArray:urlArray},function(){
-    res.status(200).send({
-      imagesSaved: true
-    });
+app.post('/urlbatch', (req, res) => {
+  let userid = req.body.uniqueID;
+  let urlArray = req.body.bookmarks;
+  
+  let chunk = 5;
+  let parellerlTasksCount = 1;
+  let q = async_lib.queue((chunkBookmarks, next) => {
+      console.log('Queue Length : ' + q.length());
+      upsertMongodb.SaveImageData(chunkBookmarks, next);
+    }, parellerlTasksCount);
+  
+  q.drain = () => {
+      console.log('all items have been processed');
+  };
+
+  for (let i=0,j=urlArray.length; i<j; i+=chunk) {
+    let chunkedArray = urlArray.slice(i,i+chunk);
+    q.push({userID:userid, bookmakArray:chunkedArray});
+  }
+ 
+  res.status(200).send({
+    queued: true,
+    index: Math.ceil(urlArray.length/chunk),
+    length: q.length(),
   });
   
 });
